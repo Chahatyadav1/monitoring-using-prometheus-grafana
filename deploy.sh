@@ -44,3 +44,26 @@ kubectl apply -f grafana-deployment.yaml
 
 echo "Deploying Services..."
 kubectl apply -f services.yaml
+
+echo "⏳ Waiting for services to be ready..."
+kubectl wait --for=condition=available deployment/prometheus -n monitoring --timeout=300s
+kubectl wait --for=condition=available deployment/grafana -n monitoring --timeout=300s
+
+
+# Function to get external IP with timeout
+get_external_ip() {
+    local service=$1
+    local timeout=180
+    local counter=0
+    
+    while [ $counter -lt $timeout ]; do
+        IP=$(kubectl get service "$service" -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+        if [ -n "$IP" ] && [ "$IP" != "null" ]; then
+            echo "$IP"
+            return 0
+        fi
+        sleep 5
+        counter=$((counter + 5))
+    done
+    echo "pending"
+}
