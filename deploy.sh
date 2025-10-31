@@ -30,7 +30,7 @@ terraform apply -auto-approve
 
 gcloud container clusters get-credentials $(terraform output -raw cluster_name) --region $REGION --project $PROJECT_ID
 # Deploy Kubernetes applications
-echo "⚙️  Deploying monitoring applications to Kubernetes..."
+echo " Deploying monitoring applications to Kubernetes..."
 cd ../kubernetes
 
 echo "Creating monitoring namespace..."
@@ -45,7 +45,7 @@ kubectl apply -f grafana-deployment.yaml
 echo "Deploying Services..."
 kubectl apply -f services.yaml
 
-echo "⏳ Waiting for services to be ready..."
+echo "Waiting for services to be ready..."
 kubectl wait --for=condition=available deployment/prometheus -n monitoring --timeout=300s
 kubectl wait --for=condition=available deployment/grafana -n monitoring --timeout=300s
 
@@ -70,7 +70,7 @@ get_external_ip() {
 PROMETHEUS_IP=$(get_external_ip "prometheus")
 GRAFANA_IP=$(get_external_ip "grafana")
 
-echo "📊 Prometheus:"
+echo "Prometheus:"
 if [ "$PROMETHEUS_IP" = "pending" ]; then
     echo "   External IP is still pending..."
     echo "   Check with: kubectl get service prometheus -n monitoring"
@@ -78,7 +78,7 @@ else
     echo "   URL: http://${PROMETHEUS_IP}"
 fi
 echo ""
-echo "📈 Grafana:"
+echo "Grafana:"
 if [ "$GRAFANA_IP" = "pending" ]; then
     echo "   External IP is still pending..."
     echo "   Check with: kubectl get service grafana -n monitoring"
@@ -93,4 +93,4 @@ echo "🔧 Alternative access via port-forwarding:"
 echo "   Grafana:    kubectl port-forward -n monitoring service/grafana 3000:3000"
 echo "   Prometheus: kubectl port-forward -n monitoring service/prometheus 9090:9090"
 echo ""
-echo "✅ Deployment completed!"
+echo "Deployment completed!"
