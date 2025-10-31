@@ -67,3 +67,30 @@ get_external_ip() {
     done
     echo "pending"
 }
+PROMETHEUS_IP=$(get_external_ip "prometheus")
+GRAFANA_IP=$(get_external_ip "grafana")
+
+echo "📊 Prometheus:"
+if [ "$PROMETHEUS_IP" = "pending" ]; then
+    echo "   External IP is still pending..."
+    echo "   Check with: kubectl get service prometheus -n monitoring"
+else
+    echo "   URL: http://${PROMETHEUS_IP}"
+fi
+echo ""
+echo "📈 Grafana:"
+if [ "$GRAFANA_IP" = "pending" ]; then
+    echo "   External IP is still pending..."
+    echo "   Check with: kubectl get service grafana -n monitoring"
+else
+    echo "   URL: http://${GRAFANA_IP}"
+    echo "   Username: admin"
+    echo "   Password: admin123"
+fi
+
+echo ""
+echo "🔧 Alternative access via port-forwarding:"
+echo "   Grafana:    kubectl port-forward -n monitoring service/grafana 3000:3000"
+echo "   Prometheus: kubectl port-forward -n monitoring service/prometheus 9090:9090"
+echo ""
+echo "✅ Deployment completed!"
