@@ -11,20 +11,10 @@ if ! terraform init &>/dev/null; then
 fi
 
 echo " Applying Terraform..."
-success=false
-for i in {1..10}; do
-    if terraform apply -auto-approve &>/dev/null; then
-        echo " Terraform apply successful"
-        success=true
-        break
-    else
-        echo " Waiting for Terraform apply to complete... retry ($i/10)"
-        sleep 30s
-    fi
-done
-if [ "$success" = false ]; then
-    echo " Terraform apply failed after 10 retries"
-    exit 1
+if ! terraform apply -auto-approve -input=false; then
+  echo " Terraform apply failed."
+  terraform show                                             #  for debugging
+  exit 1
 fi
 
 PROJECT_ID=$(terraform output -raw project_id)
@@ -32,13 +22,26 @@ REGION=$(terraform output -raw cluster_region)
 CLUSTER_NAME=$(terraform output -raw cluster_name)
 
 echo " Getting GKE cluster credentials..."
-if ! gcloud container clusters get-credentials "$CLUSTER_NAME" --region "$REGION" --project "$PROJECT_ID" &>/dev/null; then
-    echo " Failed to configure GKE cluster credentials"
-    exit 1
-else
-    echo " GKE cluster credentials configured successfully"
-fi
+echo " Waiting for GKE cluster credentials to become available..."
+success=false
+for i in {1..5}; do
+    if gcloud container clusters get-credentials "$CLUSTER_NAME" \
+        --region "$REGION" \
+        --project "$PROJECT_ID" &>/dev/null; then
+        echo " GKE cluster credentials configured successfully"
+        success=true
+        break
+    else
+        echo " Cluster not ready yet... retrying in 20s ($i/5)"
+        sleep 20
+    fi
+done
 
+if [ "$success" != true ]; then
+    echo "Failed to configure GKE cluster credentials after multiple attempts"
+    exit 1
+fi
+echo "download helm"
 echo " Adding Helm repositories..."
 if ! helm repo add prometheus-community https://prometheus-community.github.io/helm-charts &>/dev/null; then
     echo "Adding Prometheus Helm repo failed"
@@ -50,31 +53,30 @@ if ! helm repo add grafana https://grafana.github.io/helm-charts &>/dev/null; th
 fi
 
 echo " Updating Helm repositories..."
-if ! helm repo update &>/dev/null; then
-    echo " Helm repo update failed"
+if  helm repo update &>/dev/null; then
+    echo " Helm repo update sucess"
+else
+    echo " Helm repo update failed"     
     exit 1
 fi
 
 
 #  -------- Deploy Prometheus ---------
-
 echo " Deploying Prometheus..."
-success=false
-for i in {1..4}; do
-    if helm upgrade --install my-prometheus prometheus-community/prometheus --namespace monitoring --create-namespace --set alertmanager.enabled=false  --set server.service.type=LoadBalancer &>/dev/null; then
-        echo " Prometheus Helm chart deployed successfully"
-        success=true
-        break
-    else
-        echo " Retrying Prometheus deployment... ($i/4)"
-        sleep 20s
-    fi
-done
-if [ "$success" = false ]; then
-    echo " Prometheus deployment failed after 4 retries"
+
+if helm upgrade --install my-prometheus prometheus-community/prometheus \
+    --namespace monitoring \
+    --create-namespace \
+    --set alertmanager.enabled=false \
+    --set server.service.type=LoadBalancer \
+    --wait --timeout 10m &>/dev/null; then
+
+    echo " Prometheus Helm chart deployed successfully."
+
+else
+    echo " Prometheus deployment failed. Check 'kubectl get pods -n monitoring' for details."
     exit 1
 fi
-
 echo " Waiting for Prometheus LoadBalancer IP..."
 for i in {1..20}; do
     prometheus_ip=$(kubectl get svc --namespace monitoring my-prometheus-server -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
@@ -85,7 +87,7 @@ for i in {1..20}; do
     echo " Still waiting for Prometheus IP... ($i/20)"
     sleep 15s
 done
-if [ -z "$prometheus_ip" ]; then
+if [[ -z "$prometheus_ip" ]]; then
     echo " Prometheus LoadBalancer IP not assigned after waiting."
     exit 1
 fi
@@ -94,25 +96,19 @@ fi
 # --------  Deploy Grafana ------------
 
 echo " Deploying Grafana..."
-success=false
-for i in {1..4}; do
-    if helm upgrade --install grafana grafana/grafana \
-        --namespace monitoring \
-        --set service.type=LoadBalancer &>/dev/null; then
-        echo " Grafana Helm chart deployed successfully"
-        success=true
-        break
-    else
-        echo " Retrying Grafana deployment... ($i/4)"
-        sleep 20s
-    fi
-done
-if [ "$success" = false ]; then
-    echo " Grafana deployment failed after 4 retries"
+if helm upgrade --install grafana grafana/grafana \
+    --namespace monitoring \
+    --create-namespace \
+    --set service.type=LoadBalancer \
+    --wait --timeout 10m &>/dev/null; then
+
+    echo " Grafana Helm chart deployed successfully."
+else
+    echo " Grafana deployment failed. Check 'kubectl get pods -n monitoring' for more details."
     exit 1
 fi
 
-echo "⏳ Waiting for Grafana LoadBalancer IP..."
+echo " Waiting for Grafana LoadBalancer IP..."
 for i in {1..20}; do
     grafana_ip=$(kubectl get svc --namespace monitoring grafana -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
     if [ -n "$grafana_ip" ]; then
@@ -122,7 +118,7 @@ for i in {1..20}; do
     echo " Still waiting for Grafana IP... ($i/20)"
     sleep 15s
 done
-if [ -z "$grafana_ip" ]; then
+if [[ -z "$grafana_ip" ]]; then
     echo " Grafana LoadBalancer IP not assigned after waiting."
     exit 1
 fi
