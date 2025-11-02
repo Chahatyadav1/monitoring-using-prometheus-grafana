@@ -131,7 +131,7 @@ GRAFANA_PASSWORD=$(kubectl get secret --namespace monitoring grafana -o jsonpath
 cd ../kuberneties || { echo " kuberneties directory not found"; exit 1; }   # go to kuberneties folder
 
 echo "Applying Grafana datasource configuration..."
-if kubectl apply -f datasource.yaml &>/dev/null; then
+if kubectl apply -f datasources.yaml &>/dev/null; then
     echo " Grafana datasource ConfigMap applied successfully"
 else
     echo " Failed to apply Grafana datasource config"
