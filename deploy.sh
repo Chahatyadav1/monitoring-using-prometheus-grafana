@@ -67,7 +67,18 @@ done
 $grafana_ip=$(kubectl get svc --namespace monitoring grafana -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
 echo " Grafana is available at http://$grafana_ip:80"
 
-GRAFANA_PASSWORD=$(kubectl get secret --namespace monitoring grafana -o jsonpath="{.data.admin-password}" | base64 --decode)
-
 echo " monitoring stack deploy completed successfully "
 
+GRAFANA_PASSWORD=$(kubectl get secret --namespace monitoring grafana -o jsonpath="{.data.admin-password}" | base64 --decode)
+
+cd ../kuberneties
+if kubectl apply -f datasource.yaml &>/dev/null; then
+    echo " ConfigMap applied successfully"
+else
+    echo " Failed to apply Grafana datasource config"
+    exit 1
+fi
+
+echo " grafana dashboard  created successfully "
+
+echo" know you can see grafana dashboard at http://$grafana_ip:80 with user admin and password $GRAFANA_PASSWORD"
