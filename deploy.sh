@@ -4,13 +4,13 @@ set -e
 # go to monitoring folder
 cd monitoring || { echo " monitoring directory not found"; exit 1; }
 
-echo "🚀 Initializing Terraform..."
+echo " Initializing Terraform..."
 if ! terraform init &>/dev/null; then
     echo " Terraform init failed"
     exit 1
 fi
 
-echo "⚙️ Applying Terraform..."
+echo " Applying Terraform..."
 success=false
 for i in {1..10}; do
     if terraform apply -auto-approve &>/dev/null; then
@@ -39,7 +39,7 @@ else
     echo " GKE cluster credentials configured successfully"
 fi
 
-echo "📦 Adding Helm repositories..."
+echo " Adding Helm repositories..."
 if ! helm repo add prometheus-community https://prometheus-community.github.io/helm-charts &>/dev/null; then
     echo "Adding Prometheus Helm repo failed"
     exit 1
@@ -119,7 +119,7 @@ for i in {1..20}; do
         echo " Grafana available at: http://$grafana_ip:80"
         break
     fi
-    echo "⏳ Still waiting for Grafana IP... ($i/20)"
+    echo " Still waiting for Grafana IP... ($i/20)"
     sleep 15s
 done
 if [ -z "$grafana_ip" ]; then
@@ -134,7 +134,7 @@ GRAFANA_PASSWORD=$(kubectl get secret --namespace monitoring grafana -o jsonpath
 
 cd ../kuberneties || { echo " kuberneties directory not found"; exit 1; }   # go to kuberneties folder
 
-echo "⚙️ Applying Grafana datasource configuration..."
+echo "Applying Grafana datasource configuration..."
 if kubectl apply -f datasource.yaml &>/dev/null; then
     echo " Grafana datasource ConfigMap applied successfully"
 else
