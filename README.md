@@ -30,7 +30,7 @@ Before running the automation, ensure the following tools are installed and conf
 |------|----------|-------------|
 | [Google Cloud SDK (`gcloud`)](https://cloud.google.com/sdk/docs/install) | Latest | Used for authentication and cluster management |
 | [Terraform](https://developer.hashicorp.com/terraform/downloads) | ≥ 1.5.0 | Infrastructure provisioning |
-| [**Helm ⚠️(must be installed locally)⚠️**](https://helm.sh/docs/intro/install/) | ≥ 3.12.0 | Required for deploying Prometheus and Grafana charts |
+| [**Helm ⚠️(must be installed locally)**](https://helm.sh/docs/intro/install/) | ≥ 3.12.0 | Required for deploying Prometheus and Grafana charts |
 | [kubectl](https://kubernetes.io/docs/tasks/tools/) | Latest | Interacts with Kubernetes clusters |
 | Bash Shell | — | Required to execute the automation script |
 
